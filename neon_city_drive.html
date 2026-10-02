@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Neon City Drive</title>
+<style>
+  *{box-sizing:border-box} body{margin:0;background:#111;color:#fff;font-family:Arial,sans-serif;overflow:hidden}
+  #game{display:block;width:100vw;height:100vh;background:#18202b}
+  #hud{position:fixed;top:12px;left:12px;background:#000b;padding:10px 14px;border-radius:10px;font-weight:bold}
+  #help{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:#000b;padding:9px 14px;border-radius:10px;text-align:center}
+  #yt{position:fixed;top:12px;right:12px;background:#ff1744;color:white;text-decoration:none;padding:11px 15px;border-radius:9px;font-weight:bold;box-shadow:0 3px 10px #0008}
+  #yt:hover{background:#ff4568}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">NEON CITY • Cash: $<span id="cash">0</span> • Mission: <span id="mission">Drive to the marker</span></div>
+<a id="yt" href="https://www.youtube.com/" target="_blank" rel="noopener">▶ YouTube</a>
+<div id="help">WASD / Arrow Keys: drive • Space: brake • E: enter/exit car</div>
+<script>
+const c=document.getElementById('game'),ctx=c.getContext('2d');
+function resize(){c.width=innerWidth;c.height=innerHeight} addEventListener('resize',resize);resize();
+
+const keys={}; addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true}); addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+
+let car={x:0,y:0,a:0,s:0,inCar:true}, cash=0, missionDone=false;
+const buildings=[];
+for(let x=-1400;x<1400;x+=180) for(let y=-1400;y<1400;y+=180){
+  if(Math.random()<.75) buildings.push({x:x+25+Math.random()*25,y:y+25+Math.random()*25,w:100+Math.random()*45,h:95+Math.random()*55});
+}
+const marker={x:650,y:-480};
+
+function worldToScreen(x,y){return{x:c.width/2+(x-car.x),y:c.height/2+(y-car.y)}}
+
+function draw(){
+  ctx.fillStyle='#1b2633';ctx.fillRect(0,0,c.width,c.height);
+  const grid=60, ox=((c.width/2-car.x)%grid+grid)%grid, oy=((c.height/2-car.y)%grid+grid)%grid;
+  ctx.strokeStyle='#33404d';ctx.lineWidth=2;
+  for(let x=ox;x<c.width;x+=grid){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke()}
+  for(let y=oy;y<c.height;y+=grid){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke()}
+
+  for(const b of buildings){
+    const p=worldToScreen(b.x,b.y);
+    if(p.x+b.w<0||p.x>c.width||p.y+b.h<0||p.y>c.height)continue;
+    ctx.fillStyle='#263746';ctx.fillRect(p.x,p.y,b.w,b.h);
+    ctx.strokeStyle='#ff4fa3';ctx.strokeRect(p.x,p.y,b.w,b.h);
+    ctx.fillStyle='#f7d96b';
+    for(let xx=p.x+12;xx<p.x+b.w-8;xx+=22) for(let yy=p.y+12;yy<p.y+b.h-8;yy+=24) ctx.fillRect(xx,yy,8,10);
+  }
+
+  const m=worldToScreen(marker.x,marker.y);
+  ctx.beginPath();ctx.arc(m.x,m.y,28,0,Math.PI*2);ctx.strokeStyle='#00e5ff';ctx.lineWidth=5;ctx.stroke();
+  ctx.fillStyle='#00e5ff';ctx.font='bold 14px Arial';ctx.fillText('MISSION',m.x-32,m.y-38);
+
+  // car
+  const p=worldToScreen(car.x,car.y);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(car.a);
+  ctx.fillStyle='#e91e63';ctx.fillRect(-18,-11,36,22);
+  ctx.fillStyle='#55d8ff';ctx.fillRect(-7,-8,14,16);
+  ctx.fillStyle='#111';ctx.fillRect(-18,-14,8,5);ctx.fillRect(10,-14,8,5);ctx.fillRect(-18,9,8,5);ctx.fillRect(10,9,8,5);
+  ctx.restore();
+  requestAnimationFrame(draw);
+}
+
+function update(){
+  let up=keys.w||keys.arrowup, down=keys.s||keys.arrowdown;
+  let left=keys.a||keys.arrowleft, right=keys.d||keys.arrowright;
+  if(car.inCar){
+    if(up)car.s+=.18;if(down)car.s-=.12;
+    car.s*=keys[' ']?.88:.97;car.s=Math.max(-4,Math.min(7,car.s));
+    if(left)car.a-=.045*(Math.abs(car.s)/4+.3);if(right)car.a+=.045*(Math.abs(car.s)/4+.3);
+    car.x+=Math.cos(car.a)*car.s;car.y+=Math.sin(car.a)*car.s;
+  }
+  if(!missionDone && Math.hypot(car.x-marker.x,car.y-marker.y)<45){
+    missionDone=true;cash+=500;
+    document.getElementById('cash').textContent=cash;
+    document.getElementById('mission').textContent='Mission complete! $500 earned';
+  }
+  requestAnimationFrame(update);
+}
+draw();update();
+</script>
+</body>
+</html>
